@@ -212,7 +212,15 @@
     font-weight: 700;
     cursor: pointer;
   }
-  .hero-ph { width: 260px; height: 180px; flex-shrink: 0; }
+  .hero-ph {
+    width: 220px;
+    flex-shrink: 0;
+    background: #fff;
+    border-radius: 16px;
+    padding: 10px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.22);
+  }
+  .hero-ph img { display: block; width: 100%; height: auto; border-radius: 10px; }
 
   /* ================= FILTERS + GRID ================= */
   .shop-wrap {
@@ -263,6 +271,7 @@
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    /* auto-fill above governs desktop; breakpoints below force explicit column counts on smaller screens */
     gap: 20px;
   }
   .product-card {
@@ -272,14 +281,15 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    min-width: 0;
     transition: box-shadow 0.2s ease, transform 0.2s ease;
     cursor: pointer;
   }
   .product-card:hover { box-shadow: 0 10px 24px rgba(16,27,45,0.08); transform: translateY(-3px); }
   .product-ph { width: 100%; aspect-ratio: 1/1; border-radius: 0; overflow: hidden; }
   .product-ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .product-body { padding: 14px 14px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
-  .badge-row { display: flex; gap: 6px; }
+  .product-body { padding: 14px 14px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+  .badge-row { display: flex; gap: 6px; flex-wrap: wrap; }
   .badge {
     font-size: 10px;
     font-weight: 700;
@@ -294,9 +304,9 @@
   .badge.repack { background: rgba(107,118,132,0.12); color: var(--muted); }
   .badge.outofstock { background: rgba(204,20,20,0.12); color: var(--accent-hover); }
   .badge.comingsoon { background: rgba(217,119,6,0.12); color: var(--warn); }
-  .product-name { font-size: 14px; font-weight: 700; margin: 2px 0; line-height: 1.4; }
-  .product-cat { font-size: 11px; color: var(--muted); }
-  .product-price { font-size: 16px; font-weight: 800; color: var(--navy); margin-top: 4px; }
+  .product-name { font-size: 14px; font-weight: 700; margin: 2px 0; line-height: 1.4; overflow-wrap: anywhere; word-break: break-word; }
+  .product-cat { font-size: 11px; color: var(--muted); overflow-wrap: anywhere; }
+  .product-price { font-size: 16px; font-weight: 800; color: var(--navy); margin-top: 4px; overflow-wrap: anywhere; }
   .add-btn {
     margin-top: 10px;
     background: var(--navy);
@@ -319,17 +329,23 @@
     color: var(--muted); margin: 0 0 12px 0;
   }
   .carousel {
-    display: flex;
-    gap: 14px;
     overflow-x: auto;
+    overflow-y: hidden;
     padding-bottom: 8px;
     -webkit-overflow-scrolling: touch;
     cursor: grab;
     scrollbar-width: none;      /* Firefox */
     -ms-overflow-style: none;   /* old Edge/IE */
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
   }
   .carousel.dragging { cursor: grabbing; scroll-behavior: auto; }
   .carousel::-webkit-scrollbar { display: none; height: 0; }
+  .carousel-track {
+    display: flex;
+    gap: 14px;
+    width: max-content;
+  }
   .carousel-item {
     flex: 0 0 auto;
     width: 130px;
@@ -558,27 +574,27 @@
   }
 
   @media (max-width: 1024px) {
-    .grid { grid-template-columns: repeat(4, 1fr); }
+    .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .shop-wrap { gap: 20px; padding: 28px 20px 50px; }
     .filters { width: 190px; }
   }
   @media (max-width: 900px) {
-    .grid { grid-template-columns: repeat(3, 1fr); }
+    .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .shop-wrap { flex-direction: column; padding: 24px 18px 48px; }
     .filters { width: 100%; position: static; }
     .hero { flex-direction: column; text-align: center; padding: 40px 20px; }
     .hero-copy { max-width: 100%; }
     .hero-copy h1 { max-width: none; }
     .hero-copy p { margin-left: auto; margin-right: auto; max-width: none; }
-    .hero-ph { width: 100%; max-width: 320px; height: 160px; }
-    .footer-grid { grid-template-columns: 1fr 1fr; padding: 0 4px; }
+    .hero-ph { width: 170px; max-width: 45vw; }
+    .footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0 4px; }
     .top-bar { padding: 8px 18px; flex-wrap: wrap; gap: 6px; }
     .main-nav { padding: 14px 18px; }
     .category-bar { padding: 10px 18px; }
     footer.site-footer { padding: 40px 18px 20px; }
   }
   @media (max-width: 700px) {
-    .grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
     .product-body { padding: 11px 11px 13px; }
     .cart-drawer { width: 100%; max-width: 100vw; }
   }
@@ -595,7 +611,7 @@
     .review-card { width: 190px; }
   }
   @media (max-width: 430px) {
-    .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .logo { font-size: 19px; }
     .cart-btn { padding: 9px 12px; font-size: 13px; }
     .top-bar { font-size: 10px; padding: 7px 14px; }
@@ -606,7 +622,7 @@
     .product-price { font-size: 14px; }
   }
   @media (max-width: 340px) {
-    .grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .carousel-item { width: 104px; }
   }
 
@@ -708,7 +724,7 @@
   .btn-ghost.danger { color: var(--accent-hover); border-color: rgba(204,20,20,0.3); }
   .btn-ghost.danger:hover { background: rgba(204,20,20,0.08); }
   .admin-panel-card h3 { margin: 0 0 16px 0; font-size: 15px; }
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
   .form-grid .full { grid-column: 1 / -1; }
   .form-grid label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 5px; }
   .form-grid input, .form-grid select, .form-grid textarea {
@@ -903,7 +919,7 @@
       <p>Brand new, UK used, and premium repack devices at competitive prices. Order directly on WhatsApp and we'll confirm the same day.</p>
       <button class="hero-cta" onclick="document.getElementById('categoryBar').scrollIntoView({behavior:'smooth'})">Shop Now</button>
     </div>
-    <div class="ph hero-ph"></div>
+    <div class="hero-ph"><img src="qr-code.png" alt="Scan to shop PeterMasimu UG on your phone" loading="lazy"></div>
   </section>
 
   <div class="shop-wrap">
@@ -1420,8 +1436,9 @@ function renderReviewsCarousel() {
       <div class="review-comment">&ldquo;${escapeHtml(r.comment)}&rdquo;</div>
       <div class="review-name">${escapeHtml(r.name)}</div>
     </div>`).join('');
-  // Duplicated for the same seamless infinite-loop trick as the products carousel.
-  el.innerHTML = (reviews.length > 1) ? (cardsHtml + cardsHtml) : cardsHtml;
+  // Duplicated (2x, or more if the set is short) so the strip can loop
+  // seamlessly and drag/scroll in either direction with no visible seam.
+  el.innerHTML = `<div class="carousel-track">${buildLoopHtml(cardsHtml, reviews.length)}</div>`;
   initCarouselAutoScroll(el);
 }
 
@@ -1720,22 +1737,32 @@ function renderCarousel() {
         <div class="carousel-item-price">${fmt(p.price)}</div>
       </div>`;
   }).join('');
-  // The item list is duplicated back-to-back so the strip can loop
-  // seamlessly: once it has scrolled through one full copy, we silently
-  // snap back by exactly that width, with no visible jump.
-  carousel.innerHTML = (products.length > 1) ? (itemsHtml + itemsHtml) : itemsHtml;
+  // The item list is duplicated back-to-back inside a .carousel-track so the
+  // strip can loop seamlessly and be dragged/scrolled in either direction
+  // with no visible seam once it wraps.
+  carousel.innerHTML = `<div class="carousel-track">${buildLoopHtml(itemsHtml, products.length)}</div>`;
   initCarouselAutoScroll(carousel);
 }
 
 /* ============================================================
-   CAROUSEL — CONTINUOUS AUTO-SCROLL
-   Moves right-to-left on its own. Any manual interaction (touch drag,
-   trackpad/wheel scroll, pointer drag) pauses it immediately; once the
-   person stops interacting, it resumes automatically in whichever
-   direction they had been moving it. Each carousel element gets its
-   own independent state, so the products carousel and the reviews
-   carousel scroll separately.
+   CAROUSEL — CONTINUOUS AUTO-SCROLL, DRAG-AWARE
+   The strip drifts on its own (right-to-left by default). It's a real
+   scrollable element with the scrollbar hidden by CSS, so people can
+   still grab and drag/swipe it — and when they do, the auto-scroll
+   picks up again afterwards in whichever direction they were dragging
+   it (drag it left, it keeps drifting left; drag it right, it keeps
+   drifting right). The item list is duplicated (buildLoopHtml) so the
+   moment it scrolls through one full copy it wraps to a pixel-identical
+   spot, making the loop invisible in either direction.
    ============================================================ */
+function buildLoopHtml(itemsHtml, count) {
+  if (count <= 1) return itemsHtml;
+  // Repeat the set enough times that a single copy is comfortably
+  // wider than any viewport, so there's always room to wrap smoothly.
+  const copies = count < 4 ? 4 : 2;
+  return itemsHtml.repeat(copies);
+}
+
 const carouselAutoStates = {}; // element id -> state
 
 function initCarouselAutoScroll(el) {
@@ -1743,8 +1770,8 @@ function initCarouselAutoScroll(el) {
   if (!carouselAutoStates[el.id]) {
     carouselAutoStates[el.id] = {
       rafId: null,
-      direction: 1,     // 1 = right-to-left (scrollLeft increasing), -1 = reverse
-      speed: 0.55,       // pixels per animation frame
+      direction: 1,      // 1 = drifting right-to-left (scrollLeft increasing), -1 = reverse
+      speed: 0.55,        // pixels per animation frame
       paused: false,
       resumeTimer: null,
       lastScrollLeft: 0,
@@ -1763,28 +1790,29 @@ function initCarouselAutoScroll(el) {
     const pause = () => {
       state.paused = true;
       clearTimeout(state.resumeTimer);
+      el.classList.add('dragging');
     };
     const scheduleResume = () => {
+      el.classList.remove('dragging');
       clearTimeout(state.resumeTimer);
-      state.resumeTimer = setTimeout(() => { state.paused = false; }, 1200);
+      state.resumeTimer = setTimeout(() => { state.paused = false; }, 900);
     };
     ['pointerdown', 'touchstart', 'wheel'].forEach(evt => el.addEventListener(evt, pause, { passive: true }));
     ['pointerup', 'pointercancel', 'touchend', 'touchcancel', 'mouseleave', 'wheel'].forEach(evt => el.addEventListener(evt, scheduleResume, { passive: true }));
     el.addEventListener('scroll', () => {
-      // Content is duplicated (see renderCarousel/renderReviewsCarousel),
-      // so scrollWidth is exactly 2x one full set. Wrapping at the
-      // halfway point — in either direction — makes manual drags feel
-      // endless too, not just the automatic animation: the moment a
-      // drag reaches a boundary, we jump by exactly half the width,
-      // landing on a pixel-identical copy of the content so nothing
-      // visibly jumps.
+      // Content is duplicated (see buildLoopHtml), so scrollWidth is
+      // exactly N copies of one full set. Wrapping at the halfway point
+      // of that content — in either direction — makes manual drags feel
+      // endless too, not just the automatic drift: the moment a drag
+      // reaches a boundary, we jump by exactly half the width, landing
+      // on a pixel-identical copy so nothing visibly jumps.
       const half = el.scrollWidth / 2;
       if (half > 0) {
         if (el.scrollLeft >= half) el.scrollLeft -= half;
         else if (el.scrollLeft <= 0) el.scrollLeft += half;
       }
-      // While paused for user interaction, track which way they're
-      // moving it so auto-scroll resumes in that same direction.
+      // While paused for a manual drag, track which way the person is
+      // moving it, so auto-scroll resumes in that same direction.
       if (!state.paused) return;
       const cur = el.scrollLeft;
       if (cur > state.lastScrollLeft) state.direction = 1;
