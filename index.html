@@ -638,6 +638,25 @@
   }
   .admin-side nav button.active { background: rgba(255,255,255,0.1); color: #fff; font-weight: 700; }
   .admin-side .exit-link { margin-top: auto; font-size: 12px; color: #7C879A; }
+  .admin-side .exit-link a { display: flex; align-items: center; gap: 8px; padding: 6px 0; color: #B9C2CF; }
+  .admin-side .exit-link a svg { flex-shrink: 0; opacity: 0.85; }
+  .admin-side .exit-link a.logout-link { color: var(--accent); }
+  .admin-side .exit-link a.logout-link svg { opacity: 1; }
+  .admin-badge {
+    display: flex; align-items: center; gap: 10px;
+    padding-bottom: 14px; margin-bottom: 6px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    padding-top: 16px;
+  }
+  .admin-badge-avatar {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    background: rgba(255,255,255,0.14); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+  }
+  .admin-badge-text { display: flex; flex-direction: column; min-width: 0; }
+  .admin-badge-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.4px; color: #8A93A6; }
+  .admin-badge-name { font-size: 14px; font-weight: 700; color: #fff; }
 
   .admin-main { flex: 1; padding: 30px 34px; margin-left: 230px; }
   .admin-main h2 { margin: 0 0 4px 0; font-size: 22px; }
@@ -1089,12 +1108,16 @@
         <button onclick="showAdminSection('admins')" id="navBtnAdmins" style="display:none;">Manage Admins</button>
       </nav>
       <div class="exit-link">
-        <div style="margin-bottom:6px;" id="adminWhoami"></div>
-        <a href="#" onclick="exitAdmin(); return false;">&larr; Exit to storefront</a>
-        &nbsp;&middot;&nbsp;
-        <a href="#" onclick="openChangePasswordModal(); return false;">Change Password</a>
-        &nbsp;&middot;&nbsp;
-        <a href="#" onclick="logoutAdmin(); return false;">Log out</a>
+        <div class="admin-badge" id="adminWhoami">
+          <div class="admin-badge-avatar" id="adminAvatar"></div>
+          <div class="admin-badge-text">
+            <span class="admin-badge-label">Signed in as</span>
+            <span class="admin-badge-name" id="adminWhoamiName"></span>
+          </div>
+        </div>
+        <a href="#" onclick="exitAdmin(); return false;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Exit to storefront</a>
+        <a href="#" onclick="openChangePasswordModal(); return false;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></svg> Change Password</a>
+        <a href="#" onclick="logoutAdmin(); return false;" class="logout-link"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg> Log out</a>
       </div>
     </aside>
 
@@ -2039,6 +2062,15 @@ function isSuperAdmin() {
   return currentAdminIsSuper;
 }
 
+// Derives short avatar initials from any username, e.g. "Admin 1" -> "A1",
+// "Peter" -> "PE", "Peter Okello" -> "PO".
+function adminInitials(username) {
+  if (!username) return '?';
+  const parts = username.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return parts[0].slice(0, 2).toUpperCase();
+}
+
 async function checkRoute() {
   if (isAdminRoute()) {
     document.getElementById('public-view').style.display = 'none';
@@ -2048,7 +2080,8 @@ async function checkRoute() {
       document.getElementById('adminSetup').style.display = 'none';
       document.getElementById('adminGate').style.display = 'none';
       document.getElementById('adminShell').style.display = 'flex';
-      document.getElementById('adminWhoami').textContent = 'Signed in as ' + currentAdmin;
+      document.getElementById('adminAvatar').textContent = adminInitials(currentAdmin);
+      document.getElementById('adminWhoamiName').textContent = currentAdmin;
       updateAdminNavVisibility();
       return;
     }
