@@ -1048,7 +1048,7 @@
 
 <!-- ============================================================ -->
 <!-- ADMIN — not linked anywhere in the public UI.                -->
-<!-- Reachable only via URL hash #pm-ctrl-7f2k9, then a password.  -->
+<!-- Reachable by adding #Admin Office to the site's URL, then a password. -->
 <!-- This is obscurity, not real security — no server-side auth.   -->
 <!-- ============================================================ -->
 <div id="admin-view">
@@ -1963,7 +1963,18 @@ function checkoutWhatsApp() {
    signs in against Firestore, and admin management (create/delete/
    change password) only ever touches the database, never this file.
    ============================================================ */
-const ADMIN_HASH = '#pm-ctrl-7f2k9';
+// Visitors reach the admin panel by typing "Admin Office" after the site's
+// URL followed by #, e.g. yoursite.com/#Admin Office. Matching is
+// normalized (case-insensitive, spaces/hyphens/underscores ignored) so
+// "#AdminOffice", "#admin office", "#Admin-Office" etc. all work the same.
+const ADMIN_ROUTE_WORD = 'adminoffice';
+function normalizeRouteHash(hash) {
+  try { hash = decodeURIComponent(hash || ''); } catch (e) { /* malformed encoding — use as-is */ }
+  return hash.replace(/^#/, '').toLowerCase().replace(/[\s\-_]+/g, '');
+}
+function isAdminRoute() {
+  return normalizeRouteHash(window.location.hash) === ADMIN_ROUTE_WORD;
+}
 const ADMIN_COLLECTION = 'admins';           // sensitive: username + password hash + isSuper — only ever fetched on the /admin route
 const ADMIN_CONTACTS_COLLECTION = 'admin_contacts'; // public: username + WhatsApp number only, no password data — safe for every storefront visitor
 let ADMIN_ACCOUNTS = []; // loaded fresh from Firestore each time the gate is shown
@@ -2029,7 +2040,7 @@ function isSuperAdmin() {
 }
 
 async function checkRoute() {
-  if (window.location.hash === ADMIN_HASH) {
+  if (isAdminRoute()) {
     document.getElementById('public-view').style.display = 'none';
     document.getElementById('admin-view').style.display = 'block';
 
