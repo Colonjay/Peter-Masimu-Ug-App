@@ -390,8 +390,29 @@
     display: flex; align-items: center; justify-content: center;
     z-index: 2;
   }
-  .pm-image-wrap { width: 100%; aspect-ratio: 1/1; overflow: hidden; border-top-left-radius: 16px; border-top-right-radius: 16px; cursor: zoom-in; }
+  .pm-image-wrap { position: relative; width: 100%; aspect-ratio: 1/1; overflow: hidden; border-top-left-radius: 16px; border-top-right-radius: 16px; cursor: zoom-in; }
   .pm-image-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pm-image-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(16,27,45,0.55); color: #fff; border: none;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: none; align-items: center; justify-content: center;
+    z-index: 2;
+  }
+  .pm-image-nav:hover { background: rgba(16,27,45,0.75); }
+  .pm-image-nav-prev { left: 8px; }
+  .pm-image-nav-next { right: 8px; }
+  .pm-image-dots {
+    position: absolute; left: 0; right: 0; bottom: 8px;
+    display: none; align-items: center; justify-content: center; gap: 5px;
+    z-index: 2;
+  }
+  .pm-image-dots .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,255,255,0.55);
+  }
+  .pm-image-dots .dot.active { background: #fff; }
   .pm-body { padding: 16px 18px 20px; }
   .pm-body .badge-row { display: flex; gap: 6px; margin-bottom: 8px; }
   .pm-name { font-size: 17px; font-weight: 800; margin: 0 0 4px 0; }
@@ -474,8 +495,22 @@
     z-index: 301;
   }
   .lightbox-close:hover { background: rgba(255,255,255,0.28); }
+  .lightbox-nav {
+    position: fixed; top: 50%; transform: translateY(-50%);
+    width: 46px; height: 46px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); color: #fff;
+    border: none; cursor: pointer; font-size: 26px; line-height: 1;
+    display: none; align-items: center; justify-content: center;
+    z-index: 301;
+  }
+  .lightbox-nav:hover { background: rgba(255,255,255,0.28); }
+  .lightbox-nav-prev { left: 18px; }
+  .lightbox-nav-next { right: 18px; }
   @media (max-width: 480px) {
     .pm-card { max-width: 100%; }
+    .lightbox-nav { width: 40px; height: 40px; font-size: 22px; }
+    .lightbox-nav-prev { left: 8px; }
+    .lightbox-nav-next { right: 8px; }
   }
 
   /* ================= CART DRAWER ================= */
@@ -1071,6 +1106,9 @@
       <button class="pm-close" onclick="closeProductModal()">&times;</button>
       <div class="pm-image-wrap" id="pmImageWrap" onclick="openLightboxFromModal()">
         <img id="pmImage" src="" alt="">
+        <button type="button" class="pm-image-nav pm-image-nav-prev" onclick="stepModalImage(-1, event)" aria-label="Previous image">&#8249;</button>
+        <button type="button" class="pm-image-nav pm-image-nav-next" onclick="stepModalImage(1, event)" aria-label="Next image">&#8250;</button>
+        <div class="pm-image-dots" id="pmImageDots"></div>
       </div>
       <div class="pm-body">
         <div class="badge-row" id="pmBadgeRow"></div>
@@ -1087,7 +1125,9 @@
   <!-- Fullscreen blurred-background image lightbox -->
   <div class="lightbox-overlay" id="lightboxOverlay" onclick="if(event.target===this) closeLightbox();">
     <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+    <button type="button" class="lightbox-nav lightbox-nav-prev" onclick="stepModalImage(-1, event)" aria-label="Previous image">&#8249;</button>
     <img id="lightboxImage" src="" alt="">
+    <button type="button" class="lightbox-nav lightbox-nav-next" onclick="stepModalImage(1, event)" aria-label="Next image">&#8250;</button>
   </div>
 
   <!-- Leave a Review pop-up -->
@@ -1871,10 +1911,16 @@ function openProductModal(id) {
   const p = products.find(pp => pp.id === id);
   if (!p) return;
   const badgeClass = conditionBadgeClass(p.condition);
-  const imgSrc = (p.images && p.images[0]) ? p.images[0] : '';
-  document.getElementById('pmImage').src = imgSrc;
-  document.getElementById('pmImage').style.display = imgSrc ? 'block' : 'none';
-  document.getElementById('pmImageWrap').classList.toggle('ph', !imgSrc);
+  modalImages = (p.images && p.images.length) ? [...p.images] : [];
+  modalImageIndex = 0;
+  if (modalImages.length) {
+    setModalImage(0);
+  } else {
+    document.getElementById('pmImage').style.display = 'none';
+    document.getElementById('pmImageWrap').classList.add('ph');
+    document.getElementById('pmOverlay').dataset.currentImage = '';
+    updateImageNavUI();
+  }
   document.getElementById('pmBadgeRow').innerHTML = `<span class="badge ${badgeClass}">${p.condition}</span>`;
   document.getElementById('pmName').textContent = p.name;
   document.getElementById('pmCat').textContent = p.category;
@@ -1889,11 +1935,54 @@ function openProductModal(id) {
   addBtn.textContent = p.condition === 'Out of Stock' ? 'Out of Stock' : (p.condition === 'Coming Soon' ? 'Coming Soon' : 'Add to Cart');
   addBtn.onclick = unavailable ? null : (() => { addToCart(p.id); closeProductModal(); });
   document.getElementById('pmOverlay').classList.add('open');
-  document.getElementById('pmOverlay').dataset.currentImage = imgSrc;
 }
 
 function closeProductModal() {
   document.getElementById('pmOverlay').classList.remove('open');
+}
+
+/* ============================================================
+   PRODUCT IMAGE GALLERY (shared by the detail card + lightbox)
+   A product can have several images (see the admin upload/reorder
+   flow). modalImages / modalImageIndex track which one is showing;
+   both the small card and the fullscreen lightbox read from the
+   same state, so paging in one stays in sync with the other.
+   ============================================================ */
+let modalImages = [];
+let modalImageIndex = 0;
+
+function setModalImage(index) {
+  if (!modalImages.length) return;
+  modalImageIndex = ((index % modalImages.length) + modalImages.length) % modalImages.length;
+  const src = modalImages[modalImageIndex];
+  const pmImg = document.getElementById('pmImage');
+  pmImg.src = src;
+  pmImg.style.display = 'block';
+  document.getElementById('pmImageWrap').classList.remove('ph');
+  document.getElementById('pmOverlay').dataset.currentImage = src;
+  if (document.getElementById('lightboxOverlay').classList.contains('open')) {
+    document.getElementById('lightboxImage').src = src;
+  }
+  updateImageNavUI();
+}
+
+function stepModalImage(delta, e) {
+  if (e) e.stopPropagation();
+  setModalImage(modalImageIndex + delta);
+}
+
+function updateImageNavUI() {
+  const multi = modalImages.length > 1;
+  document.querySelectorAll('.pm-image-nav, .lightbox-nav').forEach(btn => {
+    btn.style.display = multi ? 'flex' : 'none';
+  });
+  const dots = document.getElementById('pmImageDots');
+  if (!dots) return;
+  if (!multi) { dots.style.display = 'none'; dots.innerHTML = ''; return; }
+  dots.style.display = 'flex';
+  dots.innerHTML = modalImages.map((_, i) =>
+    `<span class="dot${i === modalImageIndex ? ' active' : ''}"></span>`
+  ).join('');
 }
 
 /* ============================================================
@@ -1908,6 +1997,7 @@ function openLightboxFromModal() {
 function openLightbox(src) {
   document.getElementById('lightboxImage').src = src;
   document.getElementById('lightboxOverlay').classList.add('open');
+  updateImageNavUI();
 }
 
 function closeLightbox() {
@@ -1918,6 +2008,12 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeLightbox();
     closeProductModal();
+  }
+  if (e.key === 'ArrowLeft' && (document.getElementById('lightboxOverlay').classList.contains('open') || document.getElementById('pmOverlay').classList.contains('open'))) {
+    stepModalImage(-1);
+  }
+  if (e.key === 'ArrowRight' && (document.getElementById('lightboxOverlay').classList.contains('open') || document.getElementById('pmOverlay').classList.contains('open'))) {
+    stepModalImage(1);
   }
 });
 
