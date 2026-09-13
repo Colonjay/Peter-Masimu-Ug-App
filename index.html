@@ -302,6 +302,8 @@
     box-shadow: 0 12px 30px rgba(0,0,0,0.22);
   }
   .hero-ph img { display: block; width: 100%; height: 100%; object-fit: contain; border-radius: 10px; }
+  .hero-ph:has(img) { cursor: zoom-in; transition: transform 0.15s ease; }
+  .hero-ph:has(img):hover { transform: translateY(-3px); }
   /* Blank slots reserved for future photos — same white card as the QR
      code so all three line up as one evenly-spaced row, on every screen
      size. Just a plain gray placeholder until real images are dropped in. */
@@ -1053,9 +1055,9 @@
       <button class="hero-cta" onclick="document.getElementById('categoryBar').scrollIntoView({behavior:'smooth'})">Shop Now</button>
     </div>
     <div class="hero-gallery">
-      <div class="hero-ph"><div class="ph hero-ph-blank" aria-hidden="true"></div></div>
-      <div class="hero-ph"><div class="ph hero-ph-blank" aria-hidden="true"></div></div>
-      <div class="hero-ph"><img src="qr-code.png" alt="Scan to shop PeterMasimu UG on your phone" loading="lazy"></div>
+      <div class="hero-ph" onclick="openHeroImage(this)"><div class="ph hero-ph-blank" aria-hidden="true"></div></div>
+      <div class="hero-ph" onclick="openHeroImage(this)"><div class="ph hero-ph-blank" aria-hidden="true"></div></div>
+      <div class="hero-ph" onclick="openHeroImage(this)"><img src="qr-code.png" alt="Scan to shop PeterMasimu UG on your phone" loading="lazy"></div>
     </div>
   </section>
 
@@ -2177,6 +2179,19 @@ function openLightboxFromModal() {
   const src = document.getElementById('pmOverlay').dataset.currentImage;
   if (!src) return;
   openLightbox(src);
+}
+
+// Tapping a hero gallery photo brings it to the front in the same fullscreen
+// lightbox used for product photos. Blank placeholder slots (no <img> yet)
+// simply do nothing when tapped; once a real photo is dropped into a slot,
+// tapping it — and paging with the arrows — works automatically.
+function openHeroImage(slotEl) {
+  const clickedImg = slotEl.querySelector('img');
+  if (!clickedImg) return;
+  const imgs = Array.from(document.querySelectorAll('.hero-gallery .hero-ph img'));
+  modalImages = imgs.map(img => img.src);
+  modalImageIndex = imgs.indexOf(clickedImg);
+  openLightbox(modalImages[modalImageIndex]);
 }
 
 function openLightbox(src) {
