@@ -2119,7 +2119,10 @@ function checkoutWhatsApp() {
   });
 
   const phones = Object.keys(groups);
-  if (!phones.length) return;
+  if (!phones.length) {
+    alert('Checkout is temporarily unavailable — no admin has a WhatsApp number on file yet. Please try again shortly.');
+    return;
+  }
 
   // Open one WhatsApp chat per seller involved in this order. If the cart
   // only has items from one admin, only one chat opens as before; if it
@@ -2247,6 +2250,15 @@ async function checkRoute() {
     document.getElementById('public-view').style.display = 'none';
     document.getElementById('admin-view').style.display = 'block';
 
+    // A refresh wipes adminUnlocked (it only ever lived in a JS variable),
+    // so before falling back to the login screen, try to pick the session
+    // back up from this tab's sessionStorage — but only if it hasn't sat
+    // idle past the same 5-minute limit used while the tab stays open, and
+    // only if the account wasn't deleted in the meantime.
+    if (!adminUnlocked) {
+      await tryRestoreAdminSession();
+    }
+
     if (adminUnlocked) {
       document.getElementById('adminSetup').style.display = 'none';
       document.getElementById('adminGate').style.display = 'none';
@@ -2254,6 +2266,7 @@ async function checkRoute() {
       document.getElementById('adminAvatar').textContent = adminInitials(currentAdmin);
       document.getElementById('adminWhoamiName').textContent = currentAdmin;
       updateAdminNavVisibility();
+      resetAdminIdleTimer();
       return;
     }
 
@@ -2290,6 +2303,7 @@ async function checkAdminPassword() {
     adminUnlocked = true;
     currentAdmin = account.username;
     currentAdminIsSuper = !!account.isSuper;
+    saveAdminSession();
     errEl.style.display = 'none';
     document.getElementById('adminUserInput').value = '';
     document.getElementById('adminPassInput').value = '';
@@ -2329,6 +2343,7 @@ async function createFirstAdmin() {
     adminUnlocked = true;
     currentAdmin = username;
     currentAdminIsSuper = true;
+    saveAdminSession();
     checkRoute();
     renderAdminTable();
     updateAdminNavVisibility();
@@ -2355,6 +2370,7 @@ function logoutAdmin() {
   currentAdmin = null;
   currentAdminIsSuper = false;
   clearTimeout(adminIdleTimer);
+  clearAdminSession();
   document.getElementById('adminUserInput').value = '';
   document.getElementById('adminPassInput').value = '';
   window.location.hash = '';
@@ -2484,6 +2500,64 @@ async function deleteAdminAccount(docId, username) {
 }
 
 /* ============================================================
+   ADMIN — KEEP SIGNED IN ACROSS A REFRESH (this tab only)
+   ------------------------------------------------------------
+   adminUnlocked/currentAdmin only ever live in memory, so without
+   this a refresh always looks like a fresh visit. sessionStorage
+   survives a refresh but clears when the tab/browser closes, and
+   we additionally expire it after the same idle window used while
+   the tab stays open, so "stay signed in" never means "signed in
+   forever on a shared computer" — inactivity still logs you out.
+   ============================================================ */
+const ADMIN_SESSION_KEY = 'pm_admin_session';
+
+function saveAdminSession() {
+  try {
+    sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({ username: currentAdmin, lastActive: Date.now() }));
+  } catch (e) { /* sessionStorage unavailable (e.g. private browsing) — refresh just won't stay signed in */ }
+}
+
+function touchAdminSession() {
+  if (!adminUnlocked) return;
+  saveAdminSession();
+}
+
+function clearAdminSession() {
+  try { sessionStorage.removeItem(ADMIN_SESSION_KEY); } catch (e) {}
+}
+
+// Called once, the first time the admin route is checked after a refresh —
+// before any login/setup screen would otherwise show. Restores the signed-in
+// state from this tab's session, but only if it hasn't gone idle past
+// ADMIN_IDLE_LIMIT_MS and the account still exists (it may have been
+// deleted by another admin while this tab was away).
+async function tryRestoreAdminSession() {
+  let saved = null;
+  try {
+    const raw = sessionStorage.getItem(ADMIN_SESSION_KEY);
+    saved = raw ? JSON.parse(raw) : null;
+  } catch (e) { saved = null; }
+  if (!saved || !saved.username) return;
+
+  if (Date.now() - saved.lastActive > ADMIN_IDLE_LIMIT_MS) {
+    clearAdminSession();
+    return;
+  }
+
+  await loadAdminAccounts();
+  const account = ADMIN_ACCOUNTS.find(a => a.username === saved.username);
+  if (!account) {
+    clearAdminSession();
+    return;
+  }
+
+  adminUnlocked = true;
+  currentAdmin = account.username;
+  currentAdminIsSuper = !!account.isSuper;
+  saveAdminSession();
+}
+
+/* ============================================================
    ADMIN — AUTO-LOGOUT AFTER 5 MINUTES OF INACTIVITY
    ============================================================ */
 const ADMIN_IDLE_LIMIT_MS = 5 * 60 * 1000;
@@ -2491,6 +2565,7 @@ let adminIdleTimer = null;
 
 function resetAdminIdleTimer() {
   if (!adminUnlocked) return;
+  touchAdminSession();
   clearTimeout(adminIdleTimer);
   adminIdleTimer = setTimeout(() => {
     if (adminUnlocked) {
