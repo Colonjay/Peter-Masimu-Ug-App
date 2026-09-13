@@ -1562,6 +1562,12 @@ async function initFirebase() {
     useFirebase = false;
   }
 }
+// Kicked off immediately (script parse time), well before checkRoute() or
+// loadProducts() actually run at the bottom of the file. Anything that needs
+// to know whether Firestore is ready — most importantly loadAdminAccounts()
+// — awaits this SAME promise instead of calling initFirebase() again, so
+// every caller sees the one true outcome instead of racing each other.
+const firebaseReadyPromise = initFirebase();
 
 function listenFirestoreProducts() {
   updateSyncStatus('connecting');
@@ -1669,7 +1675,7 @@ async function loadProducts() {
   renderCategoryBar();
   renderFooterCategories();
   loadReviews();
-  await initFirebase();
+  await firebaseReadyPromise;
   if (useFirebase) {
     listenFirestoreProducts();
     loadAdminContacts(); // WhatsApp numbers only, for checkout routing — no password data
@@ -2173,6 +2179,12 @@ let currentAdminIsSuper = false;
 // public storefront, so password hashes never reach an ordinary visitor's
 // browser.
 async function loadAdminAccounts() {
+  // Wait for the Firebase connection attempt to actually finish before
+  // deciding whether an admin exists. Without this, refreshing directly on
+  // the admin URL can race ahead of Firestore connecting, wrongly concludes
+  // "no admin account exists yet", and shows the create-account screen even
+  // though your admin account is safely saved in Firestore.
+  await firebaseReadyPromise;
   if (!useFirebase || !db) { ADMIN_ACCOUNTS = []; return; }
   try {
     const snap = await db.collection(ADMIN_COLLECTION).get();
